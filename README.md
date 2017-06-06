@@ -47,6 +47,23 @@ export RABBITMQ_HA_POLICY='{\"ha-mode\":\"all\"}' && \
 export SUDO="" && \
 make deploy
 ```
+or for k8s 1.6+
+```
+kubectl create namespace rmq
+kubectl create -f kube/rbac.yml
+
+export NAMESPACE=default && \
+export DOCKER_REPOSITORY=nanit && \
+export RABBITMQ_REPLICAS=5 && \
+export RABBITMQ_DEFAULT_USER=username && \
+export RABBITMQ_DEFAULT_PASS=password && \
+export RABBITMQ_ERLANG_COOKIE=secret && \
+export RABBITMQ_EXPOSE_MANAGEMENT=TRUE && \
+export RABBITMQ_HA_POLICY='{\"ha-mode\":\"all\"}' && \
+export SUDO="" && \
+make deploy
+
+```
 
 ## Usage:
 
@@ -62,6 +79,16 @@ For now, the best option is to:
 
 1. Delete the current statefulset with `kubectl delete statefulset rabbitmq`
 2. Re-deploy the cluster with the new `RABBITMQ_REPLICAS` value
+
+## Removing all rabbit:
+`
+kubectl delete statefulset rabbitmq
+kubectl delete service rabbitmq-management
+kubectl delete service rmq-cluster
+kubectl delete service rabbitmq
+kubectl delete -f kube/rbac.yml
+kubectl delete namespace rmq
+`
 
 ## Building your own images:
 If you want to build use your own images make sure to change the DOCKER_REPOSITORY environment variable to your own docker repository.
