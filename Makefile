@@ -49,8 +49,7 @@ endef
 
 deploy-rbac-rabbitmq:
 	kubectl get clusterrole rabbit || $(call generate-rabbitmq-rbac) | kubectl create -f -
-	SERVICE_ACCOUNT='serviceAccountName: rabbit'
-	deploy-rabbitmq
+	export SERVICE_ACCOUNT='serviceAccountName: rabbit\n'
 
 deploy-rabbitmq: docker-rabbitmq
 	kubectl get ns $(NAMESPACE) || kubectl create ns $(NAMESPACE)
@@ -65,4 +64,4 @@ docker-rabbitmq:
 
 deploy: deploy-rabbitmq
 
-rbac: deploy-rbac-rabbitmq
+rbac: deploy-rbac-rabbitmq deploy-rabbitmq

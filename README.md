@@ -61,7 +61,7 @@ export RABBITMQ_ERLANG_COOKIE=secret && \
 export RABBITMQ_EXPOSE_MANAGEMENT=TRUE && \
 export RABBITMQ_HA_POLICY='{\"ha-mode\":\"all\"}' && \
 export SUDO="" && \
-make deploy
+make rbac
 
 ```
 
@@ -86,7 +86,9 @@ kubectl delete statefulset rabbitmq
 kubectl delete service rabbitmq-management
 kubectl delete service rmq-cluster
 kubectl delete service rabbitmq
-kubectl delete -f kube/rbac.yml
+kubectl delete ClusterRoleBinding rabbit
+kubectl delete ServiceAccount rabbit
+kubectl delete ClusterRole rabbit
 kubectl delete namespace rmq
 `
 
