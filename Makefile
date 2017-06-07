@@ -20,7 +20,7 @@ RABBITMQ_HA_POLICY?=$(shell curl -s config/$(NANIT_ENV)/$(RABBITMQ_APP_NAME)/ha_
 
 
 define generate-rabbitmq-rbac
-	sed -e 's/{{NAMESPACE}}/$(NAMESPACE)/g' kube/rbac.yml
+	sed -e 's/{{NAMESPACE}}/default/g' kube/rbac.yml
 endef
 
 define generate-rabbitmq-headless-svc
@@ -40,7 +40,12 @@ define generate-rabbitmq-stateful-set
 	if [ -z "$(RABBITMQ_DEFAULT_USER)" ]; then echo "ERROR: RABBITMQ_DEFAULT_USER is empty!"; exit 1; fi
 	if [ -z "$(RABBITMQ_DEFAULT_PASS)" ]; then echo "ERROR: RABBITMQ_DEFAULT_PASS is empty!"; exit 1; fi
 	if [ -z "$(RABBITMQ_ERLANG_COOKIE)" ]; then echo "ERROR: RABBITMQ_ERLANG_COOKIE is empty!"; exit 1; fi
-	sed -e 's/{{SERVICE_ACCOUNT}}/$(SERVICE_ACCOUNT)/g;s/{{SVC_NAME}}/$(RABBITMQ_HEADLESS_SERVICE_NAME)/g;s/{{APP_NAME}}/$(RABBITMQ_APP_NAME)/g;s,{{IMAGE_NAME}},$(RABBITMQ_IMAGE_NAME),g;s/{{REPLICAS}}/$(RABBITMQ_REPLICAS)/g;s/{{RABBITMQ_DEFAULT_USER}}/$(RABBITMQ_DEFAULT_USER)/g;s/{{RABBITMQ_DEFAULT_PASS}}/$(RABBITMQ_DEFAULT_PASS)/g;s/{{RABBITMQ_ERLANG_COOKIE}}/$(RABBITMQ_ERLANG_COOKIE)/g' kube/stateful.set.yml
+    SFILE=kube/stateful.set.yml
+    if [ -z "$(SERVICE_ACCOUNT)" ]; then
+        SFILE=kube/stateful.set.rbac.yml
+    fi
+    echo "Processing file $SFILE"
+    sed -e 's/{{SVC_NAME}}/$(RABBITMQ_HEADLESS_SERVICE_NAME)/g;s/{{APP_NAME}}/$(RABBITMQ_APP_NAME)/g;s,{{IMAGE_NAME}},$(RABBITMQ_IMAGE_NAME),g;s/{{REPLICAS}}/$(RABBITMQ_REPLICAS)/g;s/{{RABBITMQ_DEFAULT_USER}}/$(RABBITMQ_DEFAULT_USER)/g;s/{{RABBITMQ_DEFAULT_PASS}}/$(RABBITMQ_DEFAULT_PASS)/g;s/{{RABBITMQ_ERLANG_COOKIE}}/$(RABBITMQ_ERLANG_COOKIE)/g' $SFILE
 endef
 
 define set-ha-policy-on-rabbitmq-cluster
@@ -49,7 +54,7 @@ endef
 
 deploy-rbac-rabbitmq:
 	kubectl get clusterrole rabbit || $(call generate-rabbitmq-rbac) | kubectl create -f -
-	export SERVICE_ACCOUNT='serviceAccountName: rabbit\n'
+	export SERVICE_ACCOUNT='rbac'
 
 deploy-rabbitmq: docker-rabbitmq
 	kubectl get ns $(NAMESPACE) || kubectl create ns $(NAMESPACE)
