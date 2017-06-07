@@ -10,8 +10,7 @@ spec:
       labels:
         app: {{APP_NAME}}
     spec:
-      terminationGracePeriodSeconds: 10
-      serviceAccountName: rabbit
+      terminationGracePeriodSeconds: 10{{SERVICE_ACCOUNT}}
       containers:
       - name: {{APP_NAME}}
         image: {{IMAGE_NAME}}
