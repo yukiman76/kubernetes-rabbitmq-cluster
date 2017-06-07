@@ -20,7 +20,6 @@ RABBITMQ_HA_POLICY?=$(shell curl -s config/$(NANIT_ENV)/$(RABBITMQ_APP_NAME)/ha_
 
 
 define generate-rabbitmq-rbac
-    #namespace must be part of the yml file and cannot be added to the command line
 	sed -e 's/{{NAMESPACE}}/$(NAMESPACE)/g' kube/rbac.yml
 endef
 
@@ -49,9 +48,9 @@ define set-ha-policy-on-rabbitmq-cluster
 endef
 
 deploy-rbac-rabbitmq:
-    kubectl get clusterrole rabbit || $(call generate-rabbitmq-rbac) | kubectl create -f -    
-    SERVICE_ACCOUNT='serviceAccountName: rabbit'
-    deploy-rabbitmq
+	kubectl get clusterrole rabbit || $(call generate-rabbitmq-rbac) | kubectl create -f -
+	SERVICE_ACCOUNT='serviceAccountName: rabbit'
+	deploy-rabbitmq
 
 deploy-rabbitmq: docker-rabbitmq
 	kubectl get ns $(NAMESPACE) || kubectl create ns $(NAMESPACE)
