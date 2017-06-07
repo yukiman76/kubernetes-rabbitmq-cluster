@@ -3,7 +3,7 @@ DOCKER_REPOSITORY?=nanit
 SUDO?=sudo
 
 RABBITMQ_APP_NAME=rabbitmq
-SERVICE_ACCOUNT=''
+SERVICE_ACCOUNT=
 RABBITMQ_SERVICE_NAME=rabbitmq
 RABBITMQ_MANAGEMENT_SERVICE_NAME=rabbitmq-management
 RABBITMQ_HEADLESS_SERVICE_NAME=rmq-cluster
@@ -40,12 +40,15 @@ define generate-rabbitmq-stateful-set
 	if [ -z "$(RABBITMQ_DEFAULT_USER)" ]; then echo "ERROR: RABBITMQ_DEFAULT_USER is empty!"; exit 1; fi
 	if [ -z "$(RABBITMQ_DEFAULT_PASS)" ]; then echo "ERROR: RABBITMQ_DEFAULT_PASS is empty!"; exit 1; fi
 	if [ -z "$(RABBITMQ_ERLANG_COOKIE)" ]; then echo "ERROR: RABBITMQ_ERLANG_COOKIE is empty!"; exit 1; fi
-    SFILE=kube/stateful.set.yml
-    if [ -z "$(SERVICE_ACCOUNT)" ]; then
-        SFILE=kube/stateful.set.rbac.yml
-    fi
-    echo "Processing file $SFILE"
-    sed -e 's/{{SVC_NAME}}/$(RABBITMQ_HEADLESS_SERVICE_NAME)/g;s/{{APP_NAME}}/$(RABBITMQ_APP_NAME)/g;s,{{IMAGE_NAME}},$(RABBITMQ_IMAGE_NAME),g;s/{{REPLICAS}}/$(RABBITMQ_REPLICAS)/g;s/{{RABBITMQ_DEFAULT_USER}}/$(RABBITMQ_DEFAULT_USER)/g;s/{{RABBITMQ_DEFAULT_PASS}}/$(RABBITMQ_DEFAULT_PASS)/g;s/{{RABBITMQ_ERLANG_COOKIE}}/$(RABBITMQ_ERLANG_COOKIE)/g' $SFILE
+	sed -e 's/{{SVC_NAME}}/$(RABBITMQ_HEADLESS_SERVICE_NAME)/g;s/{{APP_NAME}}/$(RABBITMQ_APP_NAME)/g;s,{{IMAGE_NAME}},$(RABBITMQ_IMAGE_NAME),g;s/{{REPLICAS}}/$(RABBITMQ_REPLICAS)/g;s/{{RABBITMQ_DEFAULT_USER}}/$(RABBITMQ_DEFAULT_USER)/g;s/{{RABBITMQ_DEFAULT_PASS}}/$(RABBITMQ_DEFAULT_PASS)/g;s/{{RABBITMQ_ERLANG_COOKIE}}/$(RABBITMQ_ERLANG_COOKIE)/g' kube/stateful.set.yml
+endef
+
+define generate-rabbitmq-rbac-stateful-set
+	if [ -z "$(RABBITMQ_REPLICAS)" ]; then echo "ERROR: RABBITMQ_REPLICAS is empty!"; exit 1; fi
+	if [ -z "$(RABBITMQ_DEFAULT_USER)" ]; then echo "ERROR: RABBITMQ_DEFAULT_USER is empty!"; exit 1; fi
+	if [ -z "$(RABBITMQ_DEFAULT_PASS)" ]; then echo "ERROR: RABBITMQ_DEFAULT_PASS is empty!"; exit 1; fi
+	if [ -z "$(RABBITMQ_ERLANG_COOKIE)" ]; then echo "ERROR: RABBITMQ_ERLANG_COOKIE is empty!"; exit 1; fi
+	sed -e 's/{{SVC_NAME}}/$(RABBITMQ_HEADLESS_SERVICE_NAME)/g;s/{{APP_NAME}}/$(RABBITMQ_APP_NAME)/g;s,{{IMAGE_NAME}},$(RABBITMQ_IMAGE_NAME),g;s/{{REPLICAS}}/$(RABBITMQ_REPLICAS)/g;s/{{RABBITMQ_DEFAULT_USER}}/$(RABBITMQ_DEFAULT_USER)/g;s/{{RABBITMQ_DEFAULT_PASS}}/$(RABBITMQ_DEFAULT_PASS)/g;s/{{RABBITMQ_ERLANG_COOKIE}}/$(RABBITMQ_ERLANG_COOKIE)/g' kube/stateful.set.rbac.yml
 endef
 
 define set-ha-policy-on-rabbitmq-cluster
@@ -54,8 +57,13 @@ endef
 
 deploy-rbac-rabbitmq:
 	kubectl get clusterrole rabbit || $(call generate-rabbitmq-rbac) | kubectl create -f -
-	export SERVICE_ACCOUNT='rbac'
-
+	kubectl get ns $(NAMESPACE) || kubectl create ns $(NAMESPACE)
+	kubectl get svc -n $(NAMESPACE) $(RABBITMQ_APP_NAME) || $(call generate-rabbitmq-svc) | kubectl create -n $(NAMESPACE) -f -
+	kubectl get svc -n $(NAMESPACE) $(RABBITMQ_HEADLESS_SERVICE_NAME) || $(call generate-rabbitmq-headless-svc) | kubectl create -n $(NAMESPACE) -f -
+	if [ "$(RABBITMQ_EXPOSE_MANAGEMENT)" = "TRUE" ]; then kubectl get svc -n $(NAMESPACE) $(RABBITMQ_MANAGEMENT_SERVICE_NAME) || $(call generate-rabbitmq-management-svc) | kubectl create -n $(NAMESPACE) -f - ; fi
+	$(call generate-rabbitmq-rbac-stateful-set) | kubectl apply -n $(NAMESPACE) -f -
+	$(call set-ha-policy-on-rabbitmq-cluster)
+    
 deploy-rabbitmq: docker-rabbitmq
 	kubectl get ns $(NAMESPACE) || kubectl create ns $(NAMESPACE)
 	kubectl get svc -n $(NAMESPACE) $(RABBITMQ_APP_NAME) || $(call generate-rabbitmq-svc) | kubectl create -n $(NAMESPACE) -f -
@@ -69,4 +77,4 @@ docker-rabbitmq:
 
 deploy: deploy-rabbitmq
 
-rbac: deploy-rbac-rabbitmq deploy-rabbitmq
+rbac: deploy-rbac-rabbitmq
