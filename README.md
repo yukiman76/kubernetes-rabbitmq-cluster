@@ -81,7 +81,7 @@ For now, the best option is to:
 2. Re-deploy the cluster with the new `RABBITMQ_REPLICAS` value
 
 ## Removing all rabbit:
-`
+```
 kubectl delete statefulset rabbitmq
 kubectl delete service rabbitmq-management
 kubectl delete service rmq-cluster
@@ -90,7 +90,7 @@ kubectl delete ClusterRoleBinding rabbit
 kubectl delete ServiceAccount rabbit
 kubectl delete ClusterRole rabbit
 kubectl delete namespace rmq
-`
+```
 
 ## Building your own images:
 If you want to build use your own images make sure to change the DOCKER_REPOSITORY environment variable to your own docker repository.
